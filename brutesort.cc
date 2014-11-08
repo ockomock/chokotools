@@ -39,9 +39,8 @@ void bruteplace(vector<T> &v)
 template <typename T>
 void brutesort(vector<T> &v)
 {
-	do 
+	while (!brutesortOK(v))
 		bruteplace(v);
-	while (!brutesortOK(v));
 }
 
 template <typename T>
