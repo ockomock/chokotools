@@ -168,23 +168,17 @@ int Proxy::servhandle(int fd)
 		return 2;
 	}
 	
-
-	switch (isforbidden(request)) {
-	case false:
+	
+	if (isforbidden(request))
 		clientsendrecv(fd, request);
-		break;
-	case true:
+	else
 		send(fd, error1.c_str(), error1.size(), 0);
-		// fall through
-	default:
-		return -1;
-	}
-
+	
 
 	return 0;
 }
 
-/* proxycon: client part connects to host given in http headers */
+/* clientcon: client part connects to host given in http headers */
 bool Proxy::clientcon(int &ps, const std::string &req)
 {
 	struct addrinfo hints, *res;
