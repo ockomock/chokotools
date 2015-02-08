@@ -169,7 +169,7 @@ int Proxy::servhandle(int fd)
 	}
 	
 	
-	if (isforbidden(request))
+	if (!isforbidden(request))
 		clientsendrecv(fd, request);
 	else
 		send(fd, error1.c_str(), error1.size(), 0);
