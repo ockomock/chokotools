@@ -48,7 +48,7 @@ public:
 
 	/*----------------------------*/
 
-
+	void reterror(const std::string &);
 	bool isforbidden(const std::string &);
 	std::string getheaderinfo(const std::string &, const std::string &);
 	
@@ -65,19 +65,9 @@ private:
 		"SpongeBob"
 	};
 
-	const std::string error1 =  {
-		"<html><title>Net Ninny Error Page 1 for CPSC 441 Assignment 1</title><body>"
-		"<p>Sorry, but the Web page that you were trying to accessis inappropriate"
-		" for you, based on the URL.The page has been blocked to avoid insulting y"
-		"our intelligence.</p><p>Net Ninny</p></body></html>"
-	};
+	const std::string error1 = "GET /~TDTS04/labs/2011/ass2/error1.html HTTP/1.1\r\nHost: ida.liu.se\r\nConnention: close\r\n\r\n";	
 
-	const std::string error2 = {
-		"<html><title>Net Ninny Error Page 2 for CPSC 441 Assignment 1</title><body>"
-		"<p>Sorry, but the Web page that you were trying to accessis inappropriate"
-		" for you, based on some of the words it contains.The page has been blocke"
-		"d to avoid insulting your intelligence.</p><p>Net Ninny</p></body></html>"
-	};
+	const std::string error2 = "GET /~TDTS04/labs/2011/ass2/error2.html HTTP/1.1\r\nHost: ida.liu.se\r\nConnection: close\r\n\r\n";
 
 	/*----------------------------------------*/
 };
@@ -176,8 +166,8 @@ int Proxy::servhandle(int fd)
 	
 	if (!isforbidden(request))
 		clientsendrecv(fd, request);
-	else
-		send(fd, error1.c_str(), error1.size(), 0);
+	else 
+		reterror(error1);
 	
 
 	return 0;
@@ -235,8 +225,8 @@ int Proxy::clientsendrecv(int fd, const std::string &req)
 		result += std::string(buf, buf+n);
 		if (check)
 			if (isforbidden(result)) {
-				send(fd, error2.c_str(), error2.size(), 0);
 				close(proxy_fd);
+				reterror(error2);
 				return -1;
 			}	
 	}
@@ -279,6 +269,27 @@ std::string Proxy::creategetrequest(const std::string &req)
 
 
 	return g;
+}
+
+/* reterror: sends a HTTP redirection to provide the web browser with an error page */
+void Proxy::reterror(const std::string &error)
+{
+	int ps, n;
+	char buf[8192];
+	
+	clientcon(ps, "Host: ida.liu.se\r");
+	
+	send(ps, error.c_str(), error.size(), 0);
+	
+	if ((n = recv(ps, buf, sizeof buf-1, 0)) <= 0) {
+		close(ps);
+		return;
+	}
+
+	buf[n] = '\0';
+	send(fd, buf, strlen(buf), 0);
+
+	close(ps);
 }
 
 /* filtertext: check if s contains any forbidden words */
