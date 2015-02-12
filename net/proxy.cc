@@ -91,6 +91,7 @@ Proxy::~Proxy()
 /* servinit: set up a socket to listen to a port */
 int Proxy::servinit(const char *service)
 {
+	int opt = 1;
 	struct addrinfo hints, *res, *rp;
 
 	memset(&hints, 0, sizeof hints);
@@ -110,6 +111,10 @@ int Proxy::servinit(const char *service)
 
 		if ((listener = socket(rp->ai_family, rp->ai_socktype, rp->ai_protocol)) == -1)
 			continue;
+		if (setsockopt(listener, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof opt) == -1) {
+			close(listener);
+			continue;
+		}
 		if (!bind(listener, rp->ai_addr, rp->ai_addrlen) && !listen(listener, 5))
 			break;
 		close(listener);
@@ -205,6 +210,7 @@ bool Proxy::clientcon(int &ps, const std::string &req)
                    sends back the data to the user */
 int Proxy::clientsendrecv(int fd, const std::string &req)
 {	
+	bool check = false;
 	int proxy_fd, n = 0;
 	char buf[123456];
 	std::string result, greq = creategetrequest(req);
@@ -213,17 +219,26 @@ int Proxy::clientsendrecv(int fd, const std::string &req)
 		close(proxy_fd);
 		return 1;
 	}
-	
+
 	std::cout << greq << std::endl;
 	send(proxy_fd, greq.c_str(), greq.size(), 0);
+	if ((n = recv(proxy_fd, buf, sizeof buf-1, 0)) <= 0) {
+		close(proxy_fd);
+		return 2;
+	}
+
+	result += std::string(buf, buf+n);
+	if (result.find("Content-Type: text") != std::string::npos)
+		check = true;
 
 	while ((n = recv(proxy_fd, buf, sizeof buf-1, 0)) > 0) {
 		result += std::string(buf, buf+n);
-		if (isforbidden(result)) {
-			send(fd, error2.c_str(), error2.size(), 0);
-			close(proxy_fd);
-			return -1;
-		}	
+		if (check)
+			if (isforbidden(result)) {
+				send(fd, error2.c_str(), error2.size(), 0);
+				close(proxy_fd);
+				return -1;
+			}	
 	}
 	
 	result += '\0';
